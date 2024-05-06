@@ -1,14 +1,21 @@
-﻿using Po1640_SVGAnimace.Models;
+﻿using Newtonsoft.Json;
+using Po1640_SVGAnimace.Models;
 using System.Drawing;
 
 namespace Po1640_SVGAnimace.Pages
 {
     public partial class SVG
     {
+        public SVG()
+        {
+            Task.Run(NastaveniNacist); 
+        }
+
         public int SvgWidth { get; set; } = 1600;
         public int SvgHeight { get; set; } = 800;
         public int MinRozmer { get; set; } = 20;
         public int MaxRozmer { get; set; } = 100;
+        public bool AnimaceBezi { get; set; } = false;
         public List<Models.Obrazec> SvgObrazceList { get; set; } = new List<Models.Obrazec>();
 
         private Random rnd = new Random();
@@ -37,6 +44,62 @@ namespace Po1640_SVGAnimace.Pages
             if(obrazec != null)
                 SvgObrazceList.Add(obrazec);
 
+        }
+
+        private void OdebratObrazec()
+        {
+            if (SvgObrazceList.Any())
+            {
+                SvgObrazceList.RemoveAt(SvgObrazceList.Count - 1);
+            }
+        }
+
+        private async Task NastaveniUlozit()
+        {
+            string json = JsonConvert.SerializeObject(SvgObrazceList, 
+                new JsonSerializerSettings {TypeNameHandling = TypeNameHandling.Auto });
+
+            await localStorage.SetItemAsync("data", json);
+        }
+
+        private async Task NastaveniNacist()
+        {
+            var jsonData = await localStorage.GetItemAsync<string>("data");
+            if (jsonData != null)
+            {
+                List<Models.Obrazec>? geometrie = JsonConvert.DeserializeObject<List<Models.Obrazec>>(jsonData, 
+                    new JsonSerializerSettings { TypeNameHandling = TypeNameHandling.Auto });
+                if (geometrie != null)
+                {
+                    SvgObrazceList.AddRange(geometrie);
+                    StateHasChanged();
+                }
+
+            }
+
+        }
+        private async Task NastaveniSmazat()
+        {
+            await localStorage.RemoveItemAsync("data");
+        }
+
+        private async Task AnimaciSpustit()
+        {
+            AnimaceBezi = true;
+            do
+            {
+                foreach (var item in SvgObrazceList)
+                {
+                    item.PosunObjekt(1,SvgWidth, SvgHeight, MaxRozmer);
+                }
+                StateHasChanged();
+                await Task.Delay(10);
+            } while (AnimaceBezi);
+        }
+
+        private void AnimaciZastavit()
+        {
+            AnimaceBezi = false;
         }
     }
 }
